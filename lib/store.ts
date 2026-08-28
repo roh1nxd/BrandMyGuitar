@@ -109,7 +109,9 @@ export async function processNewBid({
   zones[zoneIndex] = {
     ...zone,
     current_bid_cents: amount_cents,
+    price_cents: amount_cents,
     bids_count: (zone.bids_count || 0) + 1,
+    status: 'paid',
     brand_name: bidder_name,
     website_url,
     logo_url,

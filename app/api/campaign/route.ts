@@ -30,7 +30,7 @@ export async function GET() {
     // Local fallback: calculate raised from paid zones or stored campaign
     const localCampaign = getLocalCampaign();
     const paidZones = getLocalZones().filter((z) => z.status === 'paid');
-    const calculatedRaised = paidZones.reduce((sum, z) => sum + z.price_cents, 0);
+    const calculatedRaised = paidZones.reduce((sum, z) => sum + (z.price_cents ?? z.current_bid_cents ?? z.min_bid_cents ?? 0), 0);
     const campaign = {
       ...localCampaign,
       raised_cents: Math.max(localCampaign.raised_cents, calculatedRaised),

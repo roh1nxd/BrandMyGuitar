@@ -86,6 +86,8 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
         if (zone.id === bidData.zone_id) {
           return {
             ...zone,
+            status: 'paid',
+            price_cents: bidData.amount_cents,
             current_bid_cents: bidData.amount_cents,
             bids_count: (zone.bids_count || 0) + 1,
             brand_name: bidData.bidder_name,

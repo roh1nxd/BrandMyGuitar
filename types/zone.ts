@@ -1,4 +1,5 @@
 export type ZoneSize = 'small' | 'medium' | 'large';
+export type ZoneStatus = 'available' | 'reserved' | 'paid';
 
 export interface Bid {
   id: string;
@@ -23,6 +24,8 @@ export interface Zone {
   min_bid_cents: number;
   current_bid_cents: number | null;
   bids_count: number;
+  status: ZoneStatus;
+  price_cents?: number;
   brand_name?: string | null;
   website_url?: string | null;
   logo_url?: string | null;

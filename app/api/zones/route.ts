@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
-import { getLocalZones, updateLocalZone } from '@/lib/store';
+import { getLocalZones } from '@/lib/store';
 import { INITIAL_ZONES } from '@/lib/zones';
 import { Zone } from '@/types/zone';
 
