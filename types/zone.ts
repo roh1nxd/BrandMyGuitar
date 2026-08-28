@@ -39,6 +39,8 @@ export interface ZoneDefinition {
   size: ZoneSize;
   min_bid_cents: number;
   description: string;
+  spotNumber?: number;
+  dimensions?: string;
   flatView: {
     x: number;
     y: number;
