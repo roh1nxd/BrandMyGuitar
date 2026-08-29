@@ -77,14 +77,20 @@ export async function POST(req: NextRequest) {
               .eq('zone_id', zone_id)
               .eq('status', 'active');
 
-            // Insert new active bid
+            // Insert new active bid with unique text ID and column compatibility
             const deposit_cents = Math.round(amount_cents * 0.20);
-            await adminClient.from('bids').insert({
+            const newBidId = `bid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+            const bidPayload: any = {
+              id: newBidId,
               zone_id,
+              bidder_name: bidder_name,
+              bidder_email: bidder_email,
               brand_name: bidder_name,
               email: bidder_email,
               website_url: website_url || '',
               x_handle: twitter_handle || null,
+              twitter_handle: twitter_handle || null,
               logo_url: logo_url || '',
               amount_cents,
               deposit_cents,
@@ -92,7 +98,30 @@ export async function POST(req: NextRequest) {
               razorpay_order_id,
               razorpay_signature,
               status: 'active',
-            });
+            };
+
+            const { error: insertErr } = await adminClient.from('bids').insert(bidPayload);
+            if (insertErr) {
+              console.warn('Initial insert payload notice, retrying with schema.sql fallback:', insertErr.message);
+              const cleanPayload = {
+                id: newBidId,
+                zone_id,
+                bidder_name: bidder_name,
+                bidder_email: bidder_email,
+                website_url: website_url || '',
+                logo_url: logo_url || '',
+                amount_cents,
+                deposit_cents,
+                razorpay_payment_id,
+                razorpay_order_id,
+                razorpay_signature,
+                status: 'active',
+              };
+              const { error: retryErr } = await adminClient.from('bids').insert(cleanPayload);
+              if (retryErr) {
+                console.error('Database insertion failed on retry:', retryErr);
+              }
+            }
           } catch (dbErr) {
             console.error('Database update error after Razorpay verification:', dbErr);
           }

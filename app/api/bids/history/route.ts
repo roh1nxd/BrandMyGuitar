@@ -27,8 +27,14 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const normalizedBids = (bids || []).map((b: any) => ({
+      ...b,
+      brand_name: b.brand_name || b.bidder_name || '',
+      email: b.email || b.bidder_email || '',
+    }));
+
     return NextResponse.json({
-      bids: bids || [],
+      bids: normalizedBids,
       totalCount: count || (bids ? bids.length : 0),
     });
   } catch (error: any) {

@@ -22,6 +22,15 @@ interface AuctionContextType {
     twitter_handle?: string;
     logo_url: string;
   }) => Promise<boolean>;
+  syncPaidBid: (bidData: {
+    zone_id: string;
+    amount_cents: number;
+    bidder_name: string;
+    bidder_email: string;
+    website_url?: string;
+    twitter_handle?: string;
+    logo_url: string;
+  }) => Promise<boolean>;
   getZoneDefinition: (zoneId: string) => ZoneDefinition | undefined;
   getZoneState: (zoneId: string) => Zone | undefined;
   refreshData: () => Promise<void>;
@@ -155,6 +164,38 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const syncPaidBid = async (bidData: {
+    zone_id: string;
+    amount_cents: number;
+    bidder_name: string;
+    bidder_email: string;
+    website_url?: string;
+    twitter_handle?: string;
+    logo_url: string;
+  }): Promise<boolean> => {
+    setZones((prevZones) =>
+      prevZones.map((zone) => {
+        if (zone.id === bidData.zone_id) {
+          return {
+            ...zone,
+            status: 'paid',
+            price_cents: bidData.amount_cents,
+            current_bid_cents: bidData.amount_cents,
+            bids_count: (zone.bids_count || 0) + 1,
+            brand_name: bidData.bidder_name,
+            website_url: bidData.website_url || null,
+            logo_url: bidData.logo_url,
+            top_bidder_email: bidData.bidder_email,
+          };
+        }
+        return zone;
+      })
+    );
+
+    await refreshData();
+    return true;
+  };
+
   return (
     <AuctionContext.Provider
       value={{
@@ -165,6 +206,7 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
         selectedZoneId,
         setSelectedZoneId,
         placeBid,
+        syncPaidBid,
         getZoneDefinition,
         getZoneState,
         refreshData,

@@ -90,10 +90,10 @@ export async function GET() {
             bids_count: bidsCountMap[dbZone.id] || 0,
             status: hasBid ? 'paid' : 'available',
             price_cents: hasBid ? activeBid.amount_cents : dbZone.starting_price_cents,
-            brand_name: hasBid ? activeBid.brand_name : null,
+            brand_name: hasBid ? (activeBid.brand_name || activeBid.bidder_name || null) : null,
             website_url: hasBid ? activeBid.website_url || null : null,
             logo_url: hasBid ? activeBid.logo_url : null,
-            top_bidder_email: hasBid ? activeBid.email : null,
+            top_bidder_email: hasBid ? (activeBid.email || activeBid.bidder_email || null) : null,
           };
         });
 

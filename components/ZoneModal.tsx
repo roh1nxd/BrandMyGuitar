@@ -7,7 +7,7 @@ import { formatPrice, getConvertedUnits, convertInputToEurCents } from '@/lib/cu
 import { Upload, AlertCircle, X } from 'lucide-react';
 
 export default function ZoneModal() {
-  const { selectedZoneId, setSelectedZoneId, zones, currency, getZoneDefinition, placeBid } = useAuction();
+  const { selectedZoneId, setSelectedZoneId, zones, currency, getZoneDefinition, placeBid, syncPaidBid } = useAuction();
 
   const zoneDef = selectedZoneId ? getZoneDefinition(selectedZoneId) : null;
   const zoneState = selectedZoneId ? zones.find((z) => z.id === selectedZoneId) : null;
@@ -229,8 +229,8 @@ export default function ZoneModal() {
               throw new Error(verifyData.error || 'Razorpay payment signature verification failed.');
             }
 
-            // Place bid in local context
-            await placeBid({
+            // Sync paid bid in local context and refresh state
+            await syncPaidBid({
               zone_id: selectedZoneId,
               amount_cents: canonicalEurCents,
               bidder_name: brandName.trim(),
