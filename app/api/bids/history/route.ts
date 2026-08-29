@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noCacheJson(body: any, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      ...(init?.headers || {}),
+    },
+  });
+}
 
 export async function GET() {
   try {
@@ -13,7 +26,7 @@ export async function GET() {
     }
 
     if (!adminClient) {
-      return NextResponse.json({ bids: [], totalCount: 0 });
+      return noCacheJson({ bids: [], totalCount: 0 });
     }
 
     // Fetch all bids ordered by created_at desc
@@ -24,7 +37,7 @@ export async function GET() {
 
     if (error) {
       console.error('Error fetching bid history:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return noCacheJson({ error: error.message }, { status: 500 });
     }
 
     const normalizedBids = (bids || []).map((b: any) => ({
@@ -33,12 +46,12 @@ export async function GET() {
       email: b.email || b.bidder_email || '',
     }));
 
-    return NextResponse.json({
+    return noCacheJson({
       bids: normalizedBids,
       totalCount: count || (bids ? bids.length : 0),
     });
   } catch (error: any) {
     console.error('Bid history API exception:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return noCacheJson({ error: error.message }, { status: 500 });
   }
 }

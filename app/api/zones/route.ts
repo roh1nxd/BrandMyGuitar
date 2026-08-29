@@ -1,9 +1,22 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { ZONE_DEFINITIONS, MIN_BID_INCREMENT_CENTS } from '@/lib/zones';
 import { Zone } from '@/types/zone';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noCacheJson(body: any, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      ...(init?.headers || {}),
+    },
+  });
+}
 
 export async function GET() {
   try {
@@ -11,7 +24,6 @@ export async function GET() {
     try {
       adminClient = getSupabaseAdmin();
     } catch (e) {
-      // Return unseeded defaults if service role key isn't configured yet
       adminClient = null;
     }
 
@@ -114,7 +126,7 @@ export async function GET() {
           };
         });
 
-        return NextResponse.json({ zones: orderedZones });
+        return noCacheJson({ zones: orderedZones });
       }
     }
 
@@ -134,9 +146,9 @@ export async function GET() {
       top_bidder_email: null,
     }));
 
-    return NextResponse.json({ zones: fallbackZones });
+    return noCacheJson({ zones: fallbackZones });
   } catch (error: any) {
     console.error('Failed to get zones:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return noCacheJson({ error: error.message }, { status: 500 });
   }
 }

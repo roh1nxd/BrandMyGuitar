@@ -46,7 +46,10 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
 
   const refreshData = useCallback(async () => {
     try {
-      const res = await fetch('/api/zones', { cache: 'no-store' });
+      const res = await fetch('/api/zones', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.zones && Array.isArray(data.zones)) {

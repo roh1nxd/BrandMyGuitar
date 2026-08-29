@@ -51,7 +51,10 @@ export default function Leaderboard() {
   // Fetch full bid history from /api/bids/history
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await fetch('/api/bids/history', { cache: 'no-store' });
+      const res = await fetch('/api/bids/history', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      });
       if (res.ok) {
         const data = await res.json();
         setHistoryBids(data.bids || []);

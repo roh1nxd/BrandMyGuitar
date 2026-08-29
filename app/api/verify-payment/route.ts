@@ -129,6 +129,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    console.log('[VERIFY-PAYMENT SUCCESS]', {
+      order_id: razorpay_order_id,
+      payment_id: razorpay_payment_id,
+      bid_id: recordedBid?.id,
+      status: 'active',
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Payment signature verified successfully.',
