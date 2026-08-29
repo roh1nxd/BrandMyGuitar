@@ -9,21 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#FFFFFF',
+        cream: '#FFFFEB',
+        bg: '#FFFFEB',
+        primary: {
+          DEFAULT: '#034F46',
+          hover: '#023D36',
+        },
+        'primary-hover': '#023D36',
+        ink: '#1A1A1A',
         text: {
           DEFAULT: '#1A1A1A',
-          muted: '#6B6B6B',
+          muted: '#5A5A52',
         },
-        border: '#E5E5E5',
-        'card-bg': '#F5F5F5',
-        'accent-green': '#16A34A',
-        'accent-blue': {
-          DEFAULT: '#2563EB',
-          hover: '#1D4ED8',
-        },
+        muted: '#5A5A52',
+        hairline: '#E8E4C9',
+        border: '#E8E4C9',
+        card: '#FBF9DE',
+        'card-bg': '#FBF9DE',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
       },
       borderRadius: {
         sm: '4px',

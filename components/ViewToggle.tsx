@@ -10,13 +10,13 @@ interface ViewToggleProps {
 export default function ViewToggle({ viewMode, onViewChange }: ViewToggleProps) {
   return (
     <div className="flex items-center justify-center my-6">
-      <div className="border-hairline rounded-full p-1 inline-flex bg-bg text-xs">
+      <div className="border border-hairline rounded-full p-1 inline-flex bg-card text-xs shadow-xs">
         <button
           onClick={() => onViewChange('grid')}
-          className={`px-4 py-1.5 rounded-full transition-colors font-medium ${
+          className={`px-4 py-1.5 rounded-full transition-colors font-semibold cursor-pointer ${
             viewMode === 'grid'
-              ? 'bg-text text-bg'
-              : 'text-text-muted hover:text-text'
+              ? 'bg-[#034F46] text-[#FFFFEB] shadow-xs'
+              : 'text-muted hover:text-primary'
           }`}
         >
           Live auction
@@ -24,10 +24,10 @@ export default function ViewToggle({ viewMode, onViewChange }: ViewToggleProps) 
 
         <button
           onClick={() => onViewChange('2d')}
-          className={`px-4 py-1.5 rounded-full transition-colors font-medium ${
+          className={`px-4 py-1.5 rounded-full transition-colors font-semibold cursor-pointer ${
             viewMode === '2d'
-              ? 'bg-text text-bg'
-              : 'text-text-muted hover:text-text'
+              ? 'bg-[#034F46] text-[#FFFFEB] shadow-xs'
+              : 'text-muted hover:text-primary'
           }`}
         >
           2D view
@@ -35,10 +35,10 @@ export default function ViewToggle({ viewMode, onViewChange }: ViewToggleProps) 
 
         <button
           onClick={() => onViewChange('3d')}
-          className={`px-4 py-1.5 rounded-full transition-colors font-medium ${
+          className={`px-4 py-1.5 rounded-full transition-colors font-semibold cursor-pointer ${
             viewMode === '3d'
-              ? 'bg-text text-bg'
-              : 'text-text-muted hover:text-text'
+              ? 'bg-[#034F46] text-[#FFFFEB] shadow-xs'
+              : 'text-muted hover:text-primary'
           }`}
         >
           3D view

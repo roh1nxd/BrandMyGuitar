@@ -38,37 +38,42 @@ export default function Hero() {
 
   return (
     <section className="pt-16 pb-8 sm:pt-20 sm:pb-10 px-4 sm:px-8 text-center max-w-3xl mx-auto">
-      {/* Centered Headline */}
-      <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-text leading-[1.1] mb-3">
+      {/* Eyebrow Label */}
+      <div className="inline-block px-3 py-1 bg-card border border-hairline rounded-full text-[11px] font-bold text-muted uppercase tracking-[0.2em] mb-4">
+        Live Auction · 7 Spots Available
+      </div>
+
+      {/* Centered Headline with Display Serif */}
+      <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-ink leading-[1.1] mb-4 tracking-tight">
         Your brand, on my guitar.
       </h1>
 
       {/* Subtext */}
-      <p className="text-base sm:text-lg text-text-muted mb-8 max-w-xl mx-auto">
+      <p className="text-base sm:text-lg text-muted mb-8 max-w-xl mx-auto leading-relaxed">
         Your logo travels with me everywhere I play, the moment your bid wins.
       </p>
 
       {/* Live Total Raised Stat Row (No Goal) */}
       <div className="max-w-md mx-auto mb-2">
         <div className="mb-3">
-          <div className="text-3xl sm:text-4xl font-bold text-accent-green">
+          <div className="text-3xl sm:text-4xl font-bold text-primary tracking-tight">
             {formatPrice(liveTotalEurCents, currency)} raised so far
           </div>
-          <div className="text-xs text-text-muted mt-1 font-medium">
+          <div className="text-xs text-muted mt-1 font-medium">
             {activeSpotsCount} of {totalSpots} spots currently active
           </div>
         </div>
 
         {/* Ambient Activity Bar */}
-        <div className="w-full h-2 bg-border rounded-full overflow-hidden p-0 mb-3">
+        <div className="w-full h-2.5 bg-[#E2DDD0] border border-[#DCD6C2] rounded-full overflow-hidden p-0 my-3.5">
           <div
-            className="h-full bg-accent-green rounded-full transition-all duration-500 ease-out"
+            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
             style={{ width: `${Math.max(8, activePercentage)}%` }}
           />
         </div>
 
         {/* Countdown */}
-        <div className="text-xs text-text-muted">
+        <div className="text-xs text-muted">
           Auction ends in {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s
         </div>
       </div>

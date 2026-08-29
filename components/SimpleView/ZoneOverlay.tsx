@@ -34,8 +34,8 @@ export default function ZoneOverlay({ definition }: ZoneOverlayProps) {
       <div
         className={`w-full h-full rounded-md transition-all duration-150 flex flex-col items-center justify-center p-1 relative shadow-sm ${
           hasBid
-            ? 'bg-white/95 ring-1 ring-accent-green'
-            : 'bg-white/90 hover:bg-white hover:shadow-md'
+            ? 'bg-cream/95 ring-1 ring-primary'
+            : 'bg-cream/90 border border-hairline hover:border-primary hover:bg-cream hover:shadow-md'
         }`}
       >
         {/* Has Top Bid Logo */}
@@ -47,7 +47,7 @@ export default function ZoneOverlay({ definition }: ZoneOverlayProps) {
               className="max-h-full max-w-full object-contain filter drop-shadow-xs"
             />
             {zoneState.brand_name && (
-              <span className="text-[9px] font-semibold text-text truncate bg-white px-1 py-0.5 rounded shadow-xs mt-0.5 max-w-full text-center">
+              <span className="text-[9px] font-semibold text-ink truncate bg-cream border border-hairline/60 px-1 py-0.5 rounded shadow-xs mt-0.5 max-w-full text-center">
                 {zoneState.brand_name}
               </span>
             )}
@@ -55,10 +55,10 @@ export default function ZoneOverlay({ definition }: ZoneOverlayProps) {
         ) : (
           /* Unclaimed / Open for Bids chip */
           <div className="text-center px-1">
-            <span className="text-[10px] font-bold text-text block leading-tight">
+            <span className="text-[10px] font-bold text-ink block leading-tight">
               {formatPrice(priceEurCents, currency)}
             </span>
-            <span className="text-[8px] text-text-muted uppercase font-medium block leading-tight">
+            <span className="text-[8px] text-muted uppercase font-medium block leading-tight">
               1st bid
             </span>
           </div>
@@ -67,9 +67,9 @@ export default function ZoneOverlay({ definition }: ZoneOverlayProps) {
 
       {/* Floating Hover Label */}
       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-30 min-w-[130px]">
-        <div className="bg-white rounded-md p-2 text-center shadow-lg ring-1 ring-black/5">
-          <div className="text-xs font-bold text-text">{definition.name}</div>
-          <div className="text-[11px] text-accent-green font-semibold mt-0.5">
+        <div className="bg-cream border border-hairline rounded-md p-2 text-center shadow-lg">
+          <div className="text-xs font-bold text-ink">{definition.name}</div>
+          <div className="text-[11px] text-primary font-semibold mt-0.5">
             {hasBid ? `Top bid: ${formatPrice(priceEurCents, currency)}` : `Starting from ${formatPrice(priceEurCents, currency)}`}
           </div>
         </div>

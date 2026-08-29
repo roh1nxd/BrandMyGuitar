@@ -1,10 +1,17 @@
 import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans, Instrument_Serif } from 'next/font/google';
 import './globals.css';
 
 const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap',
+});
+
+const serif = Instrument_Serif({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-serif',
   display: 'swap',
 });
 
@@ -20,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${sans.variable} bg-bg text-text font-sans antialiased`}>
+      <body className={`${sans.variable} ${serif.variable} bg-cream text-ink font-sans antialiased selection:bg-primary selection:text-cream`}>
         {children}
       </body>
     </html>

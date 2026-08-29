@@ -11,18 +11,18 @@ function CancelContent() {
   const zoneDef = ZONE_DEFINITIONS.find((z) => z.id === zoneId);
 
   return (
-    <div className="w-full max-w-md bg-bg border-hairline rounded-xl p-8 text-center shadow-sm">
-      <h1 className="text-2xl font-bold text-text mb-2">
+    <div className="w-full max-w-md bg-cream border border-hairline rounded-xl p-8 text-center shadow-sm">
+      <h1 className="text-2xl font-bold font-serif text-ink mb-2">
         Bid Cancelled
       </h1>
 
-      <p className="text-text-muted text-sm mb-6">
+      <p className="text-muted text-sm mb-6">
         No charges or deposits were made for {zoneDef ? `the ${zoneDef.name}` : 'your spot'}.
       </p>
 
       <Link
         href="/"
-        className="btn-blue inline-block"
+        className="px-6 py-3 rounded-full bg-[#034F46] hover:bg-[#023D36] text-[#FFFFEB] font-bold text-sm transition-colors shadow-xs inline-block"
       >
         Return to Auction
       </Link>
@@ -32,8 +32,8 @@ function CancelContent() {
 
 export default function CancelPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-bg text-text">
-      <Suspense fallback={<div className="text-sm text-text-muted">Loading...</div>}>
+    <main className="min-h-screen flex items-center justify-center p-4 bg-cream text-ink">
+      <Suspense fallback={<div className="text-sm text-muted">Loading...</div>}>
         <CancelContent />
       </Suspense>
     </main>

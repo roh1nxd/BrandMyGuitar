@@ -8,6 +8,7 @@ import Hero from '@/components/Hero';
 import SpotGrid from '@/components/SpotGrid';
 import ViewToggle from '@/components/ViewToggle';
 import GuitarFlatMockup from '@/components/SimpleView/GuitarFlatMockup';
+import Leaderboard from '@/components/Leaderboard';
 import Narrative from '@/components/Narrative';
 import HowItWorks from '@/components/HowItWorks';
 import Specs from '@/components/Specs';
@@ -19,8 +20,8 @@ import { Loader2 } from 'lucide-react';
 const GuitarScene = dynamic(() => import('@/components/ThreeDView/GuitarScene'), {
   ssr: false,
   loading: () => (
-    <div className="w-full max-w-5xl h-[520px] sm:h-[600px] bg-card-bg rounded-2xl flex flex-col items-center justify-center text-xs text-text-muted gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-      <Loader2 className="w-5 h-5 animate-spin text-text" />
+    <div className="w-full max-w-5xl h-[420px] sm:h-[600px] bg-card border border-hairline rounded-2xl flex flex-col items-center justify-center text-xs text-muted gap-2 shadow-xs">
+      <Loader2 className="w-5 h-5 animate-spin text-primary" />
       <span>Loading 3D Guitar...</span>
     </div>
   ),
@@ -29,22 +30,30 @@ const GuitarScene = dynamic(() => import('@/components/ThreeDView/GuitarScene'),
 function AuctionPageContent() {
   const [viewMode, setViewMode] = useState<'grid' | '2d' | '3d'>('grid');
   const auctionSectionRef = useRef<HTMLDivElement>(null);
+  const leaderboardSectionRef = useRef<HTMLDivElement>(null);
+  const { zones, selectedZoneId, setSelectedZoneId } = useAuction();
 
-  const scrollToAuction = () => {
+  const handleGetSpotClick = () => {
+    const firstAvailable = zones.find((z) => !z.current_bid_cents)?.id || zones[0]?.id || 'headstock';
+    setSelectedZoneId(firstAvailable);
     auctionSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleLeaderboardClick = () => {
+    leaderboardSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <main className="min-h-screen bg-bg text-text flex flex-col selection:bg-accent-blue selection:text-white">
+    <main className="min-h-screen bg-cream text-ink flex flex-col selection:bg-primary selection:text-cream overflow-x-hidden">
       {/* 1. Top Navbar */}
-      <Navbar onGetSpotClick={scrollToAuction} />
+      <Navbar onGetSpotClick={handleGetSpotClick} onLeaderboardClick={handleLeaderboardClick} />
 
       {/* 2. Hero with Live Total Raised & Countdown */}
       <Hero />
 
-      {/* 3. Live Auction / Spot Grid / 2D / 3D Section */}
+      {/* 3. Live Auction Viewer Section (Grid / 2D / 3D) */}
       <section id="auction" ref={auctionSectionRef} className="pb-8 w-full">
-        {/* Toggle Switch */}
+        {/* Toggle Switch: Live auction | 2D view | 3D view */}
         <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
 
         {/* View Switcher */}
@@ -54,22 +63,27 @@ function AuctionPageContent() {
       </section>
 
       {/* 4. Personal Narrative & Bottom CTA */}
-      <Narrative onBidClick={scrollToAuction} />
+      <Narrative onBidClick={handleGetSpotClick} />
 
       {/* 5. How It Works */}
       <HowItWorks />
 
-      {/* 6. Guitar Specs */}
+      {/* 6. Dedicated Standalone Leaderboard Section */}
+      <section id="leaderboard" ref={leaderboardSectionRef} className="py-10 sm:py-16 w-full bg-cream border-t border-hairline">
+        <Leaderboard />
+      </section>
+
+      {/* 7. Guitar Specs */}
       <Specs />
 
-      {/* 7. FAQ */}
+      {/* 8. FAQ */}
       <FAQ />
 
-      {/* 8. Footer */}
+      {/* 9. Footer */}
       <Footer />
 
       {/* Rebuilt Bidding Modal */}
-      <ZoneModal />
+      <ZoneModal key={selectedZoneId || 'modal'} />
     </main>
   );
 }

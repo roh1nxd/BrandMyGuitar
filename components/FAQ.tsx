@@ -13,7 +13,7 @@ export default function FAQ() {
     },
     {
       q: 'How does the deposit and auto-refund work?',
-      a: 'When you place a bid, you only pay a 20% deposit by card. If someone outbids you, Stripe automatically sends a full refund of your 20% deposit back to your original payment method right away.',
+      a: 'When you place a bid, you only pay a 20% deposit by card. If someone outbids you, Razorpay automatically sends a full refund of your 20% deposit back to your original payment method right away.',
     },
     {
       q: 'What happens when the auction ends?',
@@ -30,32 +30,32 @@ export default function FAQ() {
   ];
 
   return (
-    <section id="faq" className="py-16 sm:py-20 px-4 sm:px-8 max-w-3xl mx-auto border-t-hairline">
+    <section id="faq" className="py-16 sm:py-20 px-4 sm:px-8 max-w-3xl mx-auto border-t border-hairline">
       <div className="text-center mb-10">
-        <h2 className="text-2xl sm:text-3xl font-bold text-text mb-2">
+        <h2 className="text-2xl sm:text-3xl font-serif text-ink mb-2">
           Frequently asked questions
         </h2>
-        <p className="text-sm text-text-muted">
+        <p className="text-sm text-muted">
           Honest answers about the auction, refunds, and the guitar.
         </p>
       </div>
 
-      <div className="divide-y divide-border border-hairline rounded-xl overflow-hidden bg-bg">
+      <div className="divide-y divide-hairline border border-hairline rounded-xl overflow-hidden bg-cream">
         {faqs.map((f, i) => {
           const isOpen = openIndex === i;
           return (
             <div key={i} className="p-4 sm:p-5">
               <button
                 onClick={() => setOpenIndex(isOpen ? null : i)}
-                className="w-full text-left flex items-center justify-between gap-4 font-semibold text-sm sm:text-base text-text hover:text-accent-blue transition-colors"
+                className="w-full text-left flex items-center justify-between gap-4 font-semibold text-sm sm:text-base text-ink hover:text-primary transition-colors"
               >
                 <span>{f.q}</span>
-                <span className="text-text-muted shrink-0">
-                  {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                <span className="text-muted shrink-0">
+                  {isOpen ? <ChevronUp className="w-4 h-4 text-primary" /> : <ChevronDown className="w-4 h-4" />}
                 </span>
               </button>
               {isOpen && (
-                <div className="pt-2 text-xs sm:text-sm text-text-muted leading-relaxed">
+                <div className="pt-2 text-xs sm:text-sm text-muted leading-relaxed">
                   {f.a}
                 </div>
               )}

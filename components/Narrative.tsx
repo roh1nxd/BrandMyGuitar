@@ -10,7 +10,7 @@ export default function Narrative({ onBidClick }: NarrativeProps) {
   return (
     <section className="py-14 sm:py-18 px-4 sm:px-8 max-w-2xl mx-auto text-center">
       {/* Personal Narrative */}
-      <p className="text-base sm:text-lg text-text-muted leading-relaxed mb-8">
+      <p className="text-base sm:text-lg text-muted leading-relaxed mb-8">
         I'm financing my next guitar by selling the one surface everyone sees when I play. Gigs, open mics, YouTube videos, wherever this guitar goes, your brand goes with it.
       </p>
 
@@ -18,13 +18,13 @@ export default function Narrative({ onBidClick }: NarrativeProps) {
       <div className="flex items-center justify-center gap-5">
         <button
           onClick={onBidClick}
-          className="btn-blue"
+          className="px-5 py-2.5 rounded-full bg-[#034F46] hover:bg-[#023D36] text-[#FFFFEB] font-bold text-sm transition-colors shadow-xs cursor-pointer"
         >
           Place a bid
         </button>
         <a
           href="#how-it-works"
-          className="text-sm font-medium text-text hover:underline transition"
+          className="text-sm font-medium text-ink hover:text-primary hover:underline transition"
         >
           How bidding works
         </a>

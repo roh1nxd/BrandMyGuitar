@@ -7,8 +7,8 @@ import ZoneOverlay from './ZoneOverlay';
 export default function GuitarFlatMockup() {
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col items-center">
-      {/* Real Guitar Container without hard border */}
-      <div className="relative w-full max-w-[380px] bg-card-bg rounded-2xl p-6 flex items-center justify-center overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      {/* Real Guitar Container */}
+      <div className="relative w-full max-w-[380px] bg-card border border-hairline rounded-2xl p-6 flex items-center justify-center overflow-hidden shadow-xs">
         {/* Real 2D Guitar Image */}
         <div className="relative w-full aspect-[290/486] max-h-[580px] flex items-center justify-center">
           <img

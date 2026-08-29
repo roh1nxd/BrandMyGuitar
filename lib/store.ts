@@ -1,6 +1,6 @@
 import { Zone, Campaign, Bid } from '@/types/zone';
 import { INITIAL_ZONES, INITIAL_CAMPAIGN, DEPOSIT_PERCENTAGE } from '@/lib/zones';
-import { stripe, isStripeConfigured } from '@/lib/stripe';
+import { razorpay, isRazorpayConfigured } from '@/lib/razorpay';
 
 declare global {
   var __zonesCache: Zone[] | undefined;
@@ -40,8 +40,9 @@ export async function processNewBid({
   website_url,
   logo_url,
   amount_cents,
-  stripe_payment_intent_id,
-  stripe_session_id,
+  razorpay_payment_id,
+  razorpay_order_id,
+  razorpay_signature,
 }: {
   zone_id: string;
   bidder_name: string;
@@ -49,8 +50,9 @@ export async function processNewBid({
   website_url: string;
   logo_url: string;
   amount_cents: number;
-  stripe_payment_intent_id?: string | null;
-  stripe_session_id?: string | null;
+  razorpay_payment_id?: string | null;
+  razorpay_order_id?: string | null;
+  razorpay_signature?: string | null;
 }): Promise<{ bid: Bid; zone: Zone }> {
   const zones = getLocalZones();
   const bids = getLocalBids();
@@ -63,7 +65,7 @@ export async function processNewBid({
   const zone = zones[zoneIndex];
   const deposit_cents = Math.round(amount_cents * DEPOSIT_PERCENTAGE);
 
-  // 1. Find previous top bid for this zone (if any) and auto-refund
+  // 1. Find previous top bid for this zone (if any) and mark outbid
   const prevTopBid = bids
     .filter((b) => b.zone_id === zone_id && b.status === 'active')
     .sort((a, b) => b.amount_cents - a.amount_cents)[0];
@@ -71,19 +73,7 @@ export async function processNewBid({
   if (prevTopBid) {
     prevTopBid.status = 'outbid';
     prevTopBid.refunded = true;
-
-    // If Stripe is configured and there's a payment intent, issue refund
-    if (isStripeConfigured && stripe && prevTopBid.stripe_payment_intent_id) {
-      try {
-        await stripe.refunds.create({
-          payment_intent: prevTopBid.stripe_payment_intent_id,
-          reason: 'requested_by_customer',
-        });
-        console.log(`Auto-refunded deposit for outbid user: ${prevTopBid.bidder_email}`);
-      } catch (err) {
-        console.error('Failed to issue Stripe refund for outbid user:', err);
-      }
-    }
+    console.log(`Auto-refund flagged for outbid user deposit: ${prevTopBid.bidder_email}`);
   }
 
   // 2. Create new active top bid
@@ -96,8 +86,9 @@ export async function processNewBid({
     logo_url,
     amount_cents,
     deposit_cents,
-    stripe_payment_intent_id,
-    stripe_session_id,
+    razorpay_payment_id,
+    razorpay_order_id,
+    razorpay_signature,
     status: 'active',
     refunded: false,
     created_at: new Date().toISOString(),

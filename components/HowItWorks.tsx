@@ -25,27 +25,27 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="py-16 sm:py-20 px-4 sm:px-8 max-w-5xl mx-auto border-t-hairline">
+    <section id="how-it-works" className="py-16 sm:py-20 px-4 sm:px-8 max-w-5xl mx-auto border-t border-hairline">
       <div className="text-center max-w-xl mx-auto mb-12">
-        <h2 className="text-2xl sm:text-3xl font-bold text-text mb-3">
+        <h2 className="text-2xl sm:text-3xl font-serif text-ink mb-3">
           How bidding works
         </h2>
-        <p className="text-sm text-text-muted">
+        <p className="text-sm text-muted">
           Transparent auction mechanics with automatic deposit refunds when outbid.
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {steps.map((s, idx) => (
-          <div key={idx} className="bg-card-bg border-hairline rounded-xl p-5 flex flex-col justify-between">
+          <div key={idx} className="bg-card border border-hairline rounded-xl p-5 flex flex-col justify-between">
             <div>
-              <div className="w-6 h-6 rounded-full bg-text text-bg text-xs font-bold flex items-center justify-center mb-3">
+              <div className="w-6 h-6 rounded-full bg-primary text-cream text-xs font-bold flex items-center justify-center mb-3">
                 {s.num}
               </div>
-              <h3 className="font-semibold text-text text-sm mb-1.5">
+              <h3 className="font-semibold text-ink text-sm mb-1.5">
                 {s.title}
               </h3>
-              <p className="text-xs text-text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 {s.desc}
               </p>
             </div>

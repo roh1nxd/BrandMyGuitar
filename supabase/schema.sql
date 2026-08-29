@@ -25,8 +25,9 @@ create table if not exists bids (
   logo_url text not null,
   amount_cents integer not null,
   deposit_cents integer not null,
-  stripe_payment_intent_id text,
-  stripe_session_id text,
+  razorpay_payment_id text,
+  razorpay_order_id text,
+  razorpay_signature text,
   status text not null default 'active', -- active | outbid | won
   refunded boolean default false,
   created_at timestamptz default now()

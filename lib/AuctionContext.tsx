@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Zone, Campaign, ZoneDefinition } from '@/types/zone';
-import { INITIAL_ZONES, INITIAL_CAMPAIGN, ZONE_DEFINITIONS, MIN_BID_INCREMENT_CENTS } from '@/lib/zones';
+import { INITIAL_ZONES, INITIAL_CAMPAIGN, ZONE_DEFINITIONS } from '@/lib/zones';
 import { Currency } from '@/lib/currency';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface AuctionContextType {
   zones: Zone[];
@@ -34,34 +35,68 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
   const [currency, setCurrency] = useState<Currency>('EUR');
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
-      const [zonesRes, campaignRes] = await Promise.all([
-        fetch('/api/zones', { cache: 'no-store' }),
-        fetch('/api/campaign', { cache: 'no-store' }),
-      ]);
-      if (zonesRes.ok) {
-        const data = await zonesRes.json();
+      const res = await fetch('/api/zones', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
         if (data.zones && Array.isArray(data.zones)) {
           setZones(data.zones);
-        }
-      }
-      if (campaignRes.ok) {
-        const campData = await campaignRes.json();
-        if (campData.campaign) {
-          setCampaign(campData.campaign);
+
+          // Compute total raised from active bids
+          const totalRaised = data.zones.reduce((sum: number, z: Zone) => {
+            return sum + (z.current_bid_cents || 0);
+          }, 0);
+
+          setCampaign((prev) => ({
+            ...prev,
+            raised_cents: totalRaised,
+          }));
         }
       }
     } catch (e) {
-      console.warn('Network sync notice (using local auction state):', e);
+      console.warn('Sync notice:', e);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(refreshData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // 1. Subscribe to Supabase Realtime changes on 'bids' table safely
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const bidsChannel = supabase
+          .channel('public:bids')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'bids' },
+            () => {
+              refreshData();
+            }
+          )
+          .subscribe();
+
+        // Backup polling interval
+        const interval = setInterval(refreshData, 5000);
+
+        return () => {
+          try {
+            supabase?.removeChannel(bidsChannel);
+          } catch (e) {
+            // ignore cleanup warning
+          }
+          clearInterval(interval);
+        };
+      } catch (err) {
+        console.warn('Realtime subscription fallback to polling:', err);
+        const interval = setInterval(refreshData, 4000);
+        return () => clearInterval(interval);
+      }
+    } else {
+      const interval = setInterval(refreshData, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [refreshData]);
 
   const getZoneDefinition = (zoneId: string) => {
     return ZONE_DEFINITIONS.find((z) => z.id === zoneId);
@@ -80,7 +115,7 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
     twitter_handle?: string;
     logo_url: string;
   }): Promise<boolean> => {
-    // 1. Immediate synchronous local state update across ALL subscribed views (2D, 3D, Grid)
+    // Optimistic local UI state update
     setZones((prevZones) =>
       prevZones.map((zone) => {
         if (zone.id === bidData.zone_id) {
@@ -100,33 +135,23 @@ export function AuctionProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    // Update campaign raised total in real time
-    setCampaign((prev) => {
-      const updatedTotal = zones.reduce((sum, z) => {
-        if (z.id === bidData.zone_id) return sum + bidData.amount_cents;
-        return sum + (z.current_bid_cents || 0);
-      }, 0);
-      return { ...prev, raised_cents: Math.max(prev.raised_cents, updatedTotal) };
+    // Call server-side /api/bid endpoint
+    const res = await fetch('/api/bid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bidData),
     });
 
-    // 2. Dispatch to backend API (failsafe background call)
-    try {
-      await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          zone_id: bidData.zone_id,
-          amount_cents: bidData.amount_cents,
-          bidder_name: bidData.bidder_name,
-          bidder_email: bidData.bidder_email,
-          website_url: bidData.website_url || 'https://brandmyguitar.com',
-          logo_url: bidData.logo_url,
-        }),
-      });
-    } catch (err) {
-      console.warn('Backend recorded via client store:', err);
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      // Revert optimistic update on failure
+      await refreshData();
+      throw new Error(data.error || 'Failed to place bid on server.');
     }
 
+    // Trigger full state refresh from DB
+    await refreshData();
     return true;
   };
 

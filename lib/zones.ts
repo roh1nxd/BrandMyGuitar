@@ -151,61 +151,25 @@ export const ZONE_DEFINITIONS: EnhancedZoneDefinition[] = [
   },
 ];
 
-const futureEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-
 export const INITIAL_CAMPAIGN: Campaign = {
   id: 1,
   goal_cents: 200000,
-  raised_cents: 34000,
-  ends_at: futureEndDate,
+  raised_cents: 0,
+  ends_at: '2026-09-15T00:00:00.000Z',
   currency: 'EUR',
 };
 
-export const INITIAL_ZONES: Zone[] = ZONE_DEFINITIONS.map((def, idx) => {
-  if (idx === 0) {
-    return {
-      id: def.id,
-      name: def.name,
-      size: def.size,
-      min_bid_cents: def.min_bid_cents,
-      current_bid_cents: 12000, // 120 €
-      bids_count: 3,
-      status: 'paid',
-      price_cents: 12000,
-      brand_name: 'Nordic Audio',
-      website_url: 'https://nordicaudio.com',
-      logo_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=60',
-      top_bidder_email: 'bidder@nordicaudio.com',
-    };
-  }
-  if (idx === 3) {
-    return {
-      id: def.id,
-      name: def.name,
-      size: def.size,
-      min_bid_cents: def.min_bid_cents,
-      current_bid_cents: 22000, // 220 €
-      bids_count: 5,
-      status: 'paid',
-      price_cents: 22000,
-      brand_name: 'Tonecraft Cables',
-      website_url: 'https://tonecraft.io',
-      logo_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=60',
-      top_bidder_email: 'sponsorship@tonecraft.io',
-    };
-  }
-  return {
-    id: def.id,
-    name: def.name,
-    size: def.size,
-    min_bid_cents: def.min_bid_cents,
-    current_bid_cents: null,
-    bids_count: 0,
-    status: 'available',
-    price_cents: def.min_bid_cents,
-    brand_name: null,
-    website_url: null,
-    logo_url: null,
-    top_bidder_email: null,
-  };
-});
+export const INITIAL_ZONES: Zone[] = ZONE_DEFINITIONS.map((def) => ({
+  id: def.id,
+  name: def.name,
+  size: def.size,
+  min_bid_cents: def.min_bid_cents,
+  current_bid_cents: null,
+  bids_count: 0,
+  status: 'available',
+  price_cents: def.min_bid_cents,
+  brand_name: null,
+  website_url: null,
+  logo_url: null,
+  top_bidder_email: null,
+}));

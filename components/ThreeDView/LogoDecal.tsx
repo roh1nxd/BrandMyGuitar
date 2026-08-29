@@ -74,13 +74,13 @@ export default function LogoDecal({ definition }: LogoDecalProps) {
           <mesh position={[0, 0, 0]}>
             <planeGeometry args={[scale[0], scale[1]]} />
             <meshBasicMaterial
-              color={hovered ? '#16A34A' : '#1A1A1A'}
+              color={hovered ? '#034F46' : '#1A1A1A'}
               transparent
               opacity={hovered ? 0.25 : 0.06}
               depthWrite={false}
               side={THREE.DoubleSide}
               polygonOffset
-              polygonOffsetFactor={-6}
+              polygonOffsetFactor={-8}
             />
           </mesh>
 
@@ -88,7 +88,7 @@ export default function LogoDecal({ definition }: LogoDecalProps) {
           <mesh position={[0, 0, 0.0002]}>
             <planeGeometry args={[scale[0] * 1.01, scale[1] * 1.01]} />
             <meshBasicMaterial
-              color={hovered ? '#16A34A' : '#6B6B6B'}
+              color={hovered ? '#034F46' : '#5A5A52'}
               wireframe
               transparent
               opacity={hovered ? 0.95 : 0.4}
