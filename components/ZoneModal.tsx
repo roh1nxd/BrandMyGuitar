@@ -183,7 +183,11 @@ export default function ZoneModal() {
       }
 
       // Step 3: Configure Razorpay Checkout Modal
-      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TVh214mDSbGTeg';
+      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+
+      if (!keyId) {
+        throw new Error('NEXT_PUBLIC_RAZORPAY_KEY_ID is not configured');
+      }
 
       const options = {
         key: keyId,
