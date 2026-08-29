@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { processNewBid } from '@/lib/store';
 import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
-import { MIN_BID_INCREMENT_CENTS } from '@/lib/zones';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    console.log('[VERIFY-PAYMENT PAYLOAD RECEIVED]', body);
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bid_data } = body;
 
     // Validate missing fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error('[VERIFY-PAYMENT ERROR] Missing required payment verification fields.');
       return NextResponse.json(
         { error: 'Missing required payment verification fields (order_id, payment_id, or signature).' },
         { status: 400 }
@@ -19,6 +21,7 @@ export async function POST(req: NextRequest) {
 
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keySecret) {
+      console.error('[VERIFY-PAYMENT ERROR] RAZORPAY_KEY_SECRET is missing on server.');
       return NextResponse.json(
         { error: 'RAZORPAY_KEY_SECRET is not configured on the server.' },
         { status: 500 }
@@ -31,23 +34,26 @@ export async function POST(req: NextRequest) {
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex');
 
-    // Compare generated signature with razorpay_signature using timingSafeEqual or direct comparison
     const isSignatureValid = crypto.timingSafeEqual(
       Buffer.from(generated_signature, 'utf-8'),
       Buffer.from(razorpay_signature, 'utf-8')
     );
 
     if (!isSignatureValid) {
+      console.error('[VERIFY-PAYMENT ERROR] Invalid payment signature:', {
+        expected: generated_signature,
+        received: razorpay_signature,
+      });
       return NextResponse.json(
         { error: 'Invalid payment signature. Verification failed.' },
         { status: 400 }
       );
     }
 
-    // Signature verified successfully!
+    console.log('[VERIFY-PAYMENT SIGNATURE VALIDATED]');
+
     let recordedBid = null;
 
-    // If bid_data is provided, record the bid in DB / Store
     if (bid_data) {
       const { zone_id, bidder_name, bidder_email, website_url, twitter_handle, logo_url, amount_cents } = bid_data;
 
@@ -68,83 +74,72 @@ export async function POST(req: NextRequest) {
 
         // 2. If Supabase is configured, record in database
         if (isSupabaseConfigured) {
-          try {
-            const adminClient = getSupabaseAdmin();
-            // Mark previous active bids on zone as outbid
-            await adminClient
-              .from('bids')
-              .update({ status: 'outbid' })
-              .eq('zone_id', zone_id)
-              .eq('status', 'active');
+          const adminClient = getSupabaseAdmin();
+          const deposit_cents = Math.round(amount_cents * 0.20);
+          const newBidId = `bid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-            // Insert new active bid with unique text ID and column compatibility
-            const deposit_cents = Math.round(amount_cents * 0.20);
-            const newBidId = `bid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          // 2a. Mark previous active bids as outbid
+          console.log('[SUPABASE OUTBID UPDATE START]', { zone_id });
+          const { error: outbidErr } = await adminClient
+            .from('bids')
+            .update({ status: 'outbid' })
+            .eq('zone_id', zone_id)
+            .eq('status', 'active');
 
-            const bidPayload: any = {
-              id: newBidId,
-              zone_id,
-              bidder_name: bidder_name,
-              bidder_email: bidder_email,
-              brand_name: bidder_name,
-              email: bidder_email,
-              website_url: website_url || '',
-              x_handle: twitter_handle || null,
-              twitter_handle: twitter_handle || null,
-              logo_url: logo_url || '',
-              amount_cents,
-              deposit_cents,
-              razorpay_payment_id,
-              razorpay_order_id,
-              razorpay_signature,
-              status: 'active',
-            };
-
-            const { error: insertErr } = await adminClient.from('bids').insert(bidPayload);
-            if (insertErr) {
-              console.warn('Initial insert payload notice, retrying with schema.sql fallback:', insertErr.message);
-              const cleanPayload = {
-                id: newBidId,
-                zone_id,
-                bidder_name: bidder_name,
-                bidder_email: bidder_email,
-                website_url: website_url || '',
-                logo_url: logo_url || '',
-                amount_cents,
-                deposit_cents,
-                razorpay_payment_id,
-                razorpay_order_id,
-                razorpay_signature,
-                status: 'active',
-              };
-              const { error: retryErr } = await adminClient.from('bids').insert(cleanPayload);
-              if (retryErr) {
-                console.error('Database insertion failed on retry:', retryErr);
-              }
-            }
-          } catch (dbErr) {
-            console.error('Database update error after Razorpay verification:', dbErr);
+          if (outbidErr) {
+            console.warn('[SUPABASE OUTBID UPDATE NOTICE]', outbidErr);
           }
+
+          // 2b. Insert new active bid matching exact schema.sql columns
+          const cleanPayload = {
+            id: newBidId,
+            zone_id,
+            bidder_name: bidder_name,
+            bidder_email: bidder_email,
+            website_url: website_url || '',
+            logo_url: logo_url || '',
+            amount_cents,
+            deposit_cents,
+            razorpay_payment_id,
+            razorpay_order_id,
+            razorpay_signature,
+            status: 'active',
+          };
+
+          console.log('[SUPABASE INSERT START]', { newBidId, cleanPayload });
+
+          const { data: insertedData, error: insertErr } = await adminClient
+            .from('bids')
+            .insert(cleanPayload)
+            .select('*')
+            .single();
+
+          if (insertErr) {
+            console.error('[SUPABASE INSERT CRITICAL ERROR]', insertErr);
+            return NextResponse.json(
+              { error: `Database insertion failed: ${insertErr.message}` },
+              { status: 500 }
+            );
+          }
+
+          console.log('[SUPABASE INSERT SUCCESS]', insertedData);
+          recordedBid = insertedData;
         }
       }
     }
 
-    console.log('[VERIFY-PAYMENT SUCCESS]', {
-      order_id: razorpay_order_id,
-      payment_id: razorpay_payment_id,
-      bid_id: recordedBid?.id,
-      status: 'active',
-    });
-
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       message: 'Payment signature verified successfully.',
       razorpay_order_id,
       razorpay_payment_id,
       bid: recordedBid,
-    });
+    };
+
+    console.log('[VERIFY-PAYMENT SUCCESS RESPONSE]', responsePayload);
+    return NextResponse.json(responsePayload);
   } catch (error: any) {
-    console.error('Verify payment error:', error);
+    console.error('[VERIFY-PAYMENT EXCEPTION]', error);
     return NextResponse.json(
       { error: error.message || 'Payment verification encountered an internal server error.' },
       { status: 500 }

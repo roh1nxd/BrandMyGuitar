@@ -124,6 +124,14 @@ export default function ZoneModal() {
       return;
     }
 
+    console.log('[CLIENT STEP 1: FORM SUBMITTED]', {
+      zone_id: selectedZoneId,
+      amount_cents: canonicalEurCents,
+      brand_name: brandName.trim(),
+      email: bidderEmail.trim(),
+      website: normalizedWebsite,
+    });
+
     setSubmitting(true);
 
     try {
@@ -177,6 +185,7 @@ export default function ZoneModal() {
       });
 
       const orderData = await orderRes.json();
+      console.log('[CLIENT STEP 2: CREATE-ORDER SUCCESS]', orderData);
 
       if (!orderRes.ok || !orderData.order_id) {
         throw new Error(orderData.error || 'Failed to create Razorpay payment order.');
@@ -189,7 +198,7 @@ export default function ZoneModal() {
         throw new Error('NEXT_PUBLIC_RAZORPAY_KEY_ID is not configured');
       }
 
-      console.log('Launching Razorpay checkout popup:', { keyId, order_id: orderData.order_id });
+      console.log('[CLIENT STEP 3: OPENING RAZORPAY MODAL]', { keyId, order_id: orderData.order_id });
 
       const options = {
         key: keyId,
@@ -204,34 +213,39 @@ export default function ZoneModal() {
           email: bidderEmail.trim(),
         },
         handler: async function (response: any) {
+          console.log('[CLIENT STEP 5: RAZORPAY SUCCESS CALLBACK]', response);
           try {
             // Step 4: Verify Payment Signature on Backend
+            const verifyPayload = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bid_data: {
+                zone_id: selectedZoneId,
+                amount_cents: canonicalEurCents,
+                bidder_name: brandName.trim(),
+                bidder_email: bidderEmail.trim(),
+                website_url: normalizedWebsite,
+                twitter_handle: twitterHandle.trim() || undefined,
+                logo_url: finalLogoUrl,
+              },
+            };
+
             const verifyRes = await fetch('/api/verify-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                bid_data: {
-                  zone_id: selectedZoneId,
-                  amount_cents: canonicalEurCents,
-                  bidder_name: brandName.trim(),
-                  bidder_email: bidderEmail.trim(),
-                  website_url: normalizedWebsite,
-                  twitter_handle: twitterHandle.trim() || undefined,
-                  logo_url: finalLogoUrl,
-                },
-              }),
+              body: JSON.stringify(verifyPayload),
             });
 
             const verifyData = await verifyRes.json();
+            console.log('[CLIENT STEP 6: VERIFY-PAYMENT RESPONSE]', verifyData);
 
             if (!verifyRes.ok || !verifyData.success) {
               throw new Error(verifyData.error || 'Razorpay payment signature verification failed.');
             }
 
             // Sync paid bid in local context and refresh state
+            console.log('[CLIENT STEP 8: SYNC PAID BID START]');
             await syncPaidBid({
               zone_id: selectedZoneId,
               amount_cents: canonicalEurCents,
@@ -241,6 +255,7 @@ export default function ZoneModal() {
               twitter_handle: twitterHandle.trim() || undefined,
               logo_url: finalLogoUrl,
             });
+            console.log('[CLIENT STEP 8: SYNC PAID BID COMPLETE]');
 
             setSelectedZoneId(null);
           } catch (verifyErr: any) {

@@ -7,6 +7,7 @@ export async function POST(req: NextRequest) {
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
     if (!keyId || !keySecret) {
+      console.error('[CREATE-ORDER ERROR] Missing Razorpay API keys on server.');
       return NextResponse.json(
         { error: 'Razorpay API keys are not configured on the server.' },
         { status: 401 }
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!isRazorpayConfigured || !razorpay) {
+      console.error('[CREATE-ORDER ERROR] Razorpay SDK is not configured.');
       return NextResponse.json(
         { error: 'Razorpay integration is not configured properly.' },
         { status: 401 }
@@ -26,6 +28,7 @@ export async function POST(req: NextRequest) {
     // Validate amount
     const numericAmount = Number(amount);
     if (isNaN(numericAmount) || numericAmount < 100) {
+      console.error('[CREATE-ORDER ERROR] Invalid amount:', amount);
       return NextResponse.json(
         { error: 'Amount must be a valid number and at least 100 paise (₹1).' },
         { status: 400 }
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const order = await razorpay.orders.create(options);
 
-    return NextResponse.json({
+    const responsePayload = {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
@@ -50,9 +53,13 @@ export async function POST(req: NextRequest) {
       receipt: order.receipt,
       status: order.status,
       key_id: keyId,
-    });
+    };
+
+    console.log('[CREATE-ORDER SUCCESS]', responsePayload);
+
+    return NextResponse.json(responsePayload);
   } catch (error: any) {
-    console.error('Razorpay create-order error:', error);
+    console.error('[CREATE-ORDER EXCEPTION]', error);
     const statusCode = error.statusCode || error.status || 500;
     return NextResponse.json(
       { error: error.message || error.description || 'Failed to create Razorpay order.' },
