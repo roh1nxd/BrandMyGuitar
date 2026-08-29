@@ -183,11 +183,13 @@ export default function ZoneModal() {
       }
 
       // Step 3: Configure Razorpay Checkout Modal
-      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      const keyId = orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
       if (!keyId) {
         throw new Error('NEXT_PUBLIC_RAZORPAY_KEY_ID is not configured');
       }
+
+      console.log('Launching Razorpay checkout popup:', { keyId, order_id: orderData.order_id });
 
       const options = {
         key: keyId,
