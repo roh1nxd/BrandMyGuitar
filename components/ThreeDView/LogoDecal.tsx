@@ -22,13 +22,19 @@ function PrintedSticker({
   scale: [number, number, number];
 }) {
   const texture = useTexture(url);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.generateMipmaps = true;
+
+  React.useMemo(() => {
+    if (texture) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+    }
+  }, [texture]);
 
   return (
-    <group position={position} rotation={rotation}>
+    <group position={position} rotation={rotation} renderOrder={1}>
       {/* Matte Vinyl Sticker Body */}
-      <mesh position={[0, 0, 0]}>
+      <mesh position={[0, 0, 0.0001]}>
         <planeGeometry args={[scale[0], scale[1]]} />
         <meshStandardMaterial
           map={texture}
@@ -36,9 +42,11 @@ function PrintedSticker({
           roughness={0.35}
           metalness={0.05}
           depthWrite={false}
+          depthTest={true}
           side={THREE.DoubleSide}
           polygonOffset
-          polygonOffsetFactor={-8}
+          polygonOffsetFactor={-2}
+          polygonOffsetUnits={-2}
         />
       </mesh>
     </group>

@@ -36,7 +36,7 @@ export default function GuitarScene() {
       {/* 3D Canvas matching --bg with subtle border */}
       <div className="relative w-full h-[420px] sm:h-[620px] bg-cream border border-hairline rounded-2xl overflow-hidden shadow-xs">
         <Canvas
-          shadows
+          frameloop={autoRotate ? 'always' : 'demand'}
           camera={{ position: [0, 0, 1.4], fov: 36 }}
           style={{ background: '#FFFFEB' }}
           className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
@@ -47,7 +47,6 @@ export default function GuitarScene() {
             position={[2, 4, 3]}
             intensity={1.3}
             color="#FFFFEB"
-            castShadow
           />
           <directionalLight
             position={[-2, 1, 2]}
@@ -56,7 +55,7 @@ export default function GuitarScene() {
           />
 
           <Suspense fallback={<Loader />}>
-            <Bounds fit clip observe margin={1.2}>
+            <Bounds fit clip margin={1.2}>
               <Center top={false}>
                 <GuitarModel />
               </Center>
@@ -68,6 +67,7 @@ export default function GuitarScene() {
               scale={2.2}
               blur={2.5}
               far={1.2}
+              frames={1}
               color="#1A1A1A"
             />
           </Suspense>

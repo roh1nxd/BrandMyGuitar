@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, Instrument_Serif } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
 
 const sans = Plus_Jakarta_Sans({
@@ -30,7 +29,6 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${sans.variable} ${serif.variable} bg-cream text-ink font-sans antialiased selection:bg-primary selection:text-cream`}>
         {children}
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       </body>
     </html>
   );

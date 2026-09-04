@@ -4,17 +4,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuction } from '@/lib/AuctionContext';
 import { MIN_BID_INCREMENT_CENTS, DEPOSIT_PERCENTAGE } from '@/lib/zones';
 import { formatPrice, getConvertedUnits, convertInputToEurCents } from '@/lib/currency';
-import { Upload, AlertCircle, X } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 export default function ZoneModal() {
-  const { selectedZoneId, setSelectedZoneId, zones, currency, getZoneDefinition, placeBid, syncPaidBid } = useAuction();
+  const { selectedZoneId, setSelectedZoneId, zones, currency, getZoneDefinition, syncPaidBid, showToast } = useAuction();
 
   const zoneDef = selectedZoneId ? getZoneDefinition(selectedZoneId) : null;
   const zoneState = selectedZoneId ? zones.find((z) => z.id === selectedZoneId) : null;
 
   const hasCurrentBid = Boolean(zoneState?.current_bid_cents && zoneState.current_bid_cents > 0);
   const currentTopBidEurCents = hasCurrentBid ? zoneState!.current_bid_cents! : zoneDef?.min_bid_cents || 10000;
-  
+
   const minRequiredEurCents = hasCurrentBid
     ? currentTopBidEurCents + MIN_BID_INCREMENT_CENTS
     : (zoneDef?.min_bid_cents || 10000);
@@ -31,6 +32,9 @@ export default function ZoneModal() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoUrlRef = useRef<string | null>(null);
+
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
 
   // Sync default input and reset all form state when zone changes
   useEffect(() => {
@@ -43,6 +47,7 @@ export default function ZoneModal() {
     setLogoPreview(null);
     setErrorMsg(null);
     setSubmitting(false);
+    logoUrlRef.current = null;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -69,68 +74,43 @@ export default function ZoneModal() {
     setLogoPreview(objectUrl);
   };
 
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (typeof window !== 'undefined' && (window as any).Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
-  const handleBidSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
+  const validateForm = (): string | null => {
     if (canonicalEurCents < minRequiredEurCents) {
-      setErrorMsg(`Your bid must be at least ${formatPrice(minRequiredEurCents, currency)}.`);
-      return;
+      return `Your bid must be at least ${formatPrice(minRequiredEurCents, currency)}.`;
     }
 
     if (!brandName.trim()) {
-      setErrorMsg('Please enter your brand or company name.');
-      return;
+      return 'Please enter your brand or company name.';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!bidderEmail.trim() || !emailRegex.test(bidderEmail.trim())) {
-      setErrorMsg('Please enter a valid email address (e.g. name@company.com).');
-      return;
+      return 'Please enter a valid email address (e.g. name@company.com).';
     }
 
     if (!websiteUrl.trim()) {
-      setErrorMsg('Please enter your website URL.');
-      return;
+      return 'Please enter your website URL.';
     }
 
     const cleanWebsite = websiteUrl.trim();
     if (!cleanWebsite.includes('.')) {
-      setErrorMsg('Please enter a valid website domain (e.g. acmeaudio.com).');
-      return;
+      return 'Please enter a valid website domain (e.g. acmeaudio.com).';
     }
-
-    const normalizedWebsite = cleanWebsite.startsWith('http://') || cleanWebsite.startsWith('https://')
-      ? cleanWebsite
-      : `https://${cleanWebsite}`;
 
     if (!file && !logoPreview) {
-      setErrorMsg('Logo artwork is required. Please upload a logo image before submitting.');
-      return;
+      return 'Logo artwork is required. Please upload a logo image before submitting.';
     }
 
-    console.log('[CLIENT STEP 1: FORM SUBMITTED]', {
-      zone_id: selectedZoneId,
-      amount_cents: canonicalEurCents,
-      brand_name: brandName.trim(),
-      email: bidderEmail.trim(),
-      website: normalizedWebsite,
-    });
+    return null;
+  };
+
+  const handleCreatePayPalOrder = async (): Promise<string> => {
+    setErrorMsg(null);
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMsg(validationError);
+      throw new Error(validationError);
+    }
 
     setSubmitting(true);
 
@@ -154,156 +134,119 @@ export default function ZoneModal() {
         }
 
         finalLogoUrl = uploadData.url;
+        setLogoPreview(finalLogoUrl);
       }
 
       if (!finalLogoUrl) {
         throw new Error('Logo upload URL missing. Please re-upload your logo file.');
       }
 
-      // Step 1: Load Razorpay script
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error('Failed to load Razorpay payment gateway SDK. Please check your network connection.');
-      }
+      logoUrlRef.current = finalLogoUrl;
 
-      // Step 2: Create Razorpay Order on Backend
-      const depositPaise = Math.max(100, Math.round(depositEurCents));
+      const createPayload = {
+        amount_cents: canonicalEurCents,
+        deposit_cents: depositEurCents,
+        currency: currency,
+      };
 
       const orderRes = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: depositPaise,
-          currency: 'INR',
-          receipt: `rcpt_${selectedZoneId.substring(0, 8)}_${Date.now()}`,
-          notes: {
-            zone_id: selectedZoneId,
-            bidder_name: brandName.trim(),
-            bidder_email: bidderEmail.trim(),
-          },
-        }),
+        body: JSON.stringify(createPayload),
       });
 
       const orderData = await orderRes.json();
-      console.log('[CLIENT STEP 2: CREATE-ORDER SUCCESS]', orderData);
 
       if (!orderRes.ok || !orderData.order_id) {
-        throw new Error(orderData.error || 'Failed to create Razorpay payment order.');
+        throw new Error(orderData.error || 'Failed to create PayPal payment order.');
       }
 
-      // Step 3: Configure Razorpay Checkout Modal
-      const keyId = orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      return orderData.order_id;
+    } catch (err: any) {
+      console.error('PayPal create-order error:', err.message || err);
+      setErrorMsg(err.message || 'Failed to initiate PayPal checkout.');
+      setSubmitting(false);
+      throw err;
+    }
+  };
 
-      if (!keyId) {
-        throw new Error('NEXT_PUBLIC_RAZORPAY_KEY_ID is not configured');
-      }
+  const handleApprovePayPalOrder = async (data: { orderID: string }) => {
+    setSubmitting(true);
+    try {
+      const cleanWebsite = websiteUrl.trim();
+      const normalizedWebsite = cleanWebsite.startsWith('http://') || cleanWebsite.startsWith('https://')
+        ? cleanWebsite
+        : `https://${cleanWebsite}`;
 
-      console.log('[CLIENT STEP 3: OPENING RAZORPAY MODAL]', { keyId, order_id: orderData.order_id });
+      const finalLogoUrl = logoUrlRef.current || logoPreview || '';
 
-      const options = {
-        key: keyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: 'Brand My Guitar',
-        description: `20% Deposit for ${zoneDef.name} Spot`,
-        image: finalLogoUrl.startsWith('http') ? finalLogoUrl : undefined,
-        order_id: orderData.order_id,
-        prefill: {
-          name: brandName.trim(),
+      const capturePayload = {
+        order_id: data.orderID,
+        bid_data: {
+          zone_id: selectedZoneId,
+          amount_cents: canonicalEurCents,
+          brand_name: brandName.trim(),
           email: bidderEmail.trim(),
-        },
-        handler: async function (response: any) {
-          console.log('[CLIENT STEP 5: RAZORPAY SUCCESS CALLBACK]', response);
-          try {
-            // Step 4: Verify Payment Signature on Backend
-            const verifyPayload = {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              bid_data: {
-                zone_id: selectedZoneId,
-                amount_cents: canonicalEurCents,
-                bidder_name: brandName.trim(),
-                bidder_email: bidderEmail.trim(),
-                website_url: normalizedWebsite,
-                twitter_handle: twitterHandle.trim() || undefined,
-                logo_url: finalLogoUrl,
-              },
-            };
-
-            const verifyRes = await fetch('/api/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(verifyPayload),
-            });
-
-            const verifyData = await verifyRes.json();
-            console.log('[CLIENT STEP 6: VERIFY-PAYMENT RESPONSE]', verifyData);
-
-            if (!verifyRes.ok || !verifyData.success) {
-              throw new Error(verifyData.error || 'Razorpay payment signature verification failed.');
-            }
-
-            // Sync paid bid in local context and refresh state
-            console.log('[CLIENT STEP 8: SYNC PAID BID START]');
-            await syncPaidBid({
-              zone_id: selectedZoneId,
-              amount_cents: canonicalEurCents,
-              bidder_name: brandName.trim(),
-              bidder_email: bidderEmail.trim(),
-              website_url: normalizedWebsite,
-              twitter_handle: twitterHandle.trim() || undefined,
-              logo_url: finalLogoUrl,
-            });
-            console.log('[CLIENT STEP 8: SYNC PAID BID COMPLETE]');
-
-            setSelectedZoneId(null);
-          } catch (verifyErr: any) {
-            console.error('Razorpay verification error:', verifyErr);
-            setErrorMsg(verifyErr.message || 'Payment verification failed.');
-          } finally {
-            setSubmitting(false);
-          }
-        },
-        modal: {
-          ondismiss: function () {
-            setSubmitting(false);
-            setErrorMsg('Payment cancelled by user. Deposit was not charged.');
-          },
+          website_url: normalizedWebsite,
+          x_handle: twitterHandle.trim() || undefined,
+          logo_url: finalLogoUrl,
         },
       };
 
-      const razorpayInstance = new (window as any).Razorpay(options);
-
-      razorpayInstance.on('payment.failed', function (failResponse: any) {
-        setSubmitting(false);
-        const reason = failResponse.error?.description || failResponse.error?.reason || 'Payment failed.';
-        setErrorMsg(`Payment error: ${reason}`);
+      const captureRes = await fetch('/api/capture-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(capturePayload),
       });
 
-      razorpayInstance.open();
+      const captureData = await captureRes.json();
+
+      if (!captureRes.ok || !captureData.success) {
+        throw new Error(captureData.error || 'PayPal payment capture verification failed.');
+      }
+
+      // Sync paid bid in local context and refresh state
+      await syncPaidBid({
+        zone_id: selectedZoneId,
+        amount_cents: canonicalEurCents,
+        brand_name: brandName.trim(),
+        email: bidderEmail.trim(),
+        website_url: normalizedWebsite,
+        x_handle: twitterHandle.trim() || undefined,
+        logo_url: finalLogoUrl,
+      });
+
+      showToast({
+        type: 'success',
+        message: 'Payment successful! Your logo is now live.',
+      });
+
+      setSelectedZoneId(null);
     } catch (err: any) {
-      console.error('Bid submission error:', err);
-      setErrorMsg(err.message || 'An error occurred during payment checkout.');
+      console.error('PayPal capture order error:', err.message || err);
+      setErrorMsg(err.message || 'Payment capture failed.');
+      showToast({
+        type: 'error',
+        message: 'Payment cancelled or failed. No charge was made.',
+      });
+    } finally {
       setSubmitting(false);
     }
   };
 
-  const buttonText = submitting
-    ? 'Processing…'
-    : hasCurrentBid
-    ? `Outbid ${zoneState?.brand_name || 'current leader'}`
-    : 'Place first bid';
-
   return (
-    <div
-      onClick={() => setSelectedZoneId(null)}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-    >
-      {/* Modal Card with scrollable body and pinned footer */}
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4 overflow-y-auto">
+
+      {/* Darkened Backdrop (No backdrop-blur filter to prevent iframe text rasterization blur) */}
+      <div
+        onClick={() => setSelectedZoneId(null)}
+        className="fixed inset-0 bg-black/75 transition-opacity"
+      />
+
+      {/* Modal Card with scrollable body — Fully opaque and un-blurred */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg bg-[#FFFFEB] border border-hairline rounded-2xl shadow-2xl text-ink max-h-[88vh] flex flex-col overflow-hidden opacity-100"
+        className="relative z-10 w-full max-w-lg bg-[#FFFFEB] border border-hairline rounded-2xl shadow-2xl text-ink max-h-[90vh] my-auto flex flex-col overflow-hidden opacity-100"
       >
         {/* Top Header (Pinned at top) */}
         <div className="p-5 sm:p-6 pb-4 border-b border-hairline shrink-0 flex items-start justify-between bg-[#FFFFEB]">
@@ -335,8 +278,8 @@ export default function ZoneModal() {
           </button>
         </div>
 
-        {/* Scrollable Form Body */}
-        <form id="bid-form" onSubmit={handleBidSubmit} className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+        {/* Scrollable Form Body — Contains form inputs and PayPal Checkout */}
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs">
           {errorMsg && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -480,20 +423,57 @@ export default function ZoneModal() {
               )}
             </div>
           </div>
-        </form>
 
-        {/* Pinned Sticky Submit Footer — Guaranteed to always be visible */}
-        <div className="sticky bottom-0 bg-[#FFFFEB] border-t border-hairline p-4 sm:px-6 shrink-0 z-20">
-          <button
-            type="submit"
-            form="bid-form"
-            disabled={submitting}
-            className="w-full py-3.5 px-6 rounded-full bg-[#034F46] hover:bg-[#023D36] text-[#FFFFEB] font-bold text-sm tracking-tight transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center cursor-pointer"
-          >
-            {buttonText}
-          </button>
+          {/* PayPal Checkout Buttons Section inside scrollable body */}
+          <div className="pt-2 space-y-1.5">
+            <label className="block font-semibold text-ink mb-1 text-xs">
+              Pay deposit to confirm bid
+            </label>
+            {!paypalClientId ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs text-center">
+                NEXT_PUBLIC_PAYPAL_CLIENT_ID is not configured in .env.local
+              </div>
+            ) : (
+              <div className="p-3 bg-[#FBF9DE] border border-hairline/70 rounded-xl shadow-xs">
+                <PayPalScriptProvider
+                  options={{
+                    clientId: paypalClientId,
+                    currency: currency.toUpperCase(),
+                    intent: 'capture',
+                  }}
+                >
+                  <PayPalButtons
+                    disabled={submitting}
+                    style={{ layout: 'vertical', shape: 'rect', color: 'gold', label: 'pay' }}
+                    createOrder={handleCreatePayPalOrder}
+                    onApprove={handleApprovePayPalOrder}
+                    onError={(err) => {
+                      console.error('PayPal Buttons error:', err);
+                      setSubmitting(false);
+                      setErrorMsg('PayPal checkout encountered an error. Please try again.');
+                      showToast({
+                        type: 'error',
+                        message: 'Payment cancelled or failed. No charge was made.',
+                      });
+                    }}
+                    onCancel={() => {
+                      setSubmitting(false);
+                      setErrorMsg('Payment cancelled. Deposit was not charged.');
+                      showToast({
+                        type: 'error',
+                        message: 'Payment cancelled or failed. No charge was made.',
+                      });
+                    }}
+                  />
+                </PayPalScriptProvider>
+              </div>
+            )}
+          </div>
+        </div>
 
-          <p className="text-[11px] text-muted text-center mt-2">
+        {/* Footer Note */}
+        <div className="bg-[#FFFFEB] border-t border-hairline p-3 sm:px-6 shrink-0 text-center">
+          <p className="text-[11px] text-muted text-center">
             I check every logo by hand before it goes live.
           </p>
         </div>

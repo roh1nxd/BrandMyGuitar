@@ -1,6 +1,5 @@
 import { Zone, Campaign, Bid } from '@/types/zone';
 import { INITIAL_ZONES, INITIAL_CAMPAIGN, DEPOSIT_PERCENTAGE } from '@/lib/zones';
-import { razorpay, isRazorpayConfigured } from '@/lib/razorpay';
 
 declare global {
   var __zonesCache: Zone[] | undefined;
@@ -35,27 +34,37 @@ export function getLocalCampaign(): Campaign {
 
 export async function processNewBid({
   zone_id,
+  brand_name,
   bidder_name,
+  email,
   bidder_email,
   website_url,
+  x_handle,
+  twitter_handle,
   logo_url,
   amount_cents,
-  razorpay_payment_id,
-  razorpay_order_id,
-  razorpay_signature,
+  paypal_order_id,
+  paypal_capture_id,
 }: {
   zone_id: string;
-  bidder_name: string;
-  bidder_email: string;
+  brand_name?: string;
+  bidder_name?: string;
+  email?: string;
+  bidder_email?: string;
   website_url: string;
+  x_handle?: string | null;
+  twitter_handle?: string | null;
   logo_url: string;
   amount_cents: number;
-  razorpay_payment_id?: string | null;
-  razorpay_order_id?: string | null;
-  razorpay_signature?: string | null;
+  paypal_order_id?: string | null;
+  paypal_capture_id?: string | null;
 }): Promise<{ bid: Bid; zone: Zone }> {
   const zones = getLocalZones();
   const bids = getLocalBids();
+
+  const finalBrandName = brand_name || bidder_name || '';
+  const finalEmail = email || bidder_email || '';
+  const finalXHandle = x_handle || twitter_handle || null;
 
   const zoneIndex = zones.findIndex((z) => z.id === zone_id);
   if (zoneIndex === -1) {
@@ -73,22 +82,22 @@ export async function processNewBid({
   if (prevTopBid) {
     prevTopBid.status = 'outbid';
     prevTopBid.refunded = true;
-    console.log(`Auto-refund flagged for outbid user deposit: ${prevTopBid.bidder_email}`);
+    console.log(`Auto-refund flagged for outbid bid ${prevTopBid.id} on zone ${prevTopBid.zone_id}`);
   }
 
   // 2. Create new active top bid
   const newBid: Bid = {
     id: `bid_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     zone_id,
-    bidder_name,
-    bidder_email,
+    brand_name: finalBrandName,
+    email: finalEmail,
     website_url,
+    x_handle: finalXHandle,
     logo_url,
     amount_cents,
     deposit_cents,
-    razorpay_payment_id,
-    razorpay_order_id,
-    razorpay_signature,
+    paypal_order_id,
+    paypal_capture_id,
     status: 'active',
     refunded: false,
     created_at: new Date().toISOString(),
@@ -103,10 +112,10 @@ export async function processNewBid({
     price_cents: amount_cents,
     bids_count: (zone.bids_count || 0) + 1,
     status: 'paid',
-    brand_name: bidder_name,
+    brand_name: finalBrandName,
     website_url,
     logo_url,
-    top_bidder_email: bidder_email,
+    top_bidder_email: finalEmail,
   };
 
   getLocalCampaign(); // refresh total raised

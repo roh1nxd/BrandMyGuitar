@@ -15,6 +15,10 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+const globalForSupabase = globalThis as unknown as {
+  cachedAdminClient: any;
+};
+
 // Server-side Admin client function (fails loudly if SUPABASE_SERVICE_ROLE_KEY is missing)
 export function getSupabaseAdmin() {
   if (typeof window !== 'undefined') {
@@ -25,6 +29,10 @@ export function getSupabaseAdmin() {
     throw new Error('Supabase is not configured. Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.');
   }
 
+  if (globalForSupabase.cachedAdminClient) {
+    return globalForSupabase.cachedAdminClient;
+  }
+
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!serviceRoleKey) {
@@ -32,20 +40,18 @@ export function getSupabaseAdmin() {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing in .env.local. Server storage upload requires the service role key to bypass RLS.');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  const client = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+
+  globalForSupabase.cachedAdminClient = client;
+  return client;
 }
 
 // Backwards-compatible export (evaluates to admin client if service role key exists)
 export const supabaseAdmin = (typeof window === 'undefined' && isSupabaseConfigured && process.env.SUPABASE_SERVICE_ROLE_KEY)
-  ? createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+  ? getSupabaseAdmin()
   : null;

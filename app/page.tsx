@@ -7,15 +7,16 @@ import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import SpotGrid from '@/components/SpotGrid';
 import ViewToggle from '@/components/ViewToggle';
-import GuitarFlatMockup from '@/components/SimpleView/GuitarFlatMockup';
-import Leaderboard from '@/components/Leaderboard';
 import Narrative from '@/components/Narrative';
-import HowItWorks from '@/components/HowItWorks';
-import Specs from '@/components/Specs';
-import FAQ from '@/components/FAQ';
 import Footer from '@/components/Footer';
-import ZoneModal from '@/components/ZoneModal';
 import { Loader2 } from 'lucide-react';
+
+const ZoneModal = dynamic(() => import('@/components/ZoneModal'), { ssr: false });
+const Leaderboard = dynamic(() => import('@/components/Leaderboard'), { ssr: false });
+const GuitarFlatMockup = dynamic(() => import('@/components/SimpleView/GuitarFlatMockup'), { ssr: false });
+const HowItWorks = dynamic(() => import('@/components/HowItWorks'));
+const Specs = dynamic(() => import('@/components/Specs'));
+const FAQ = dynamic(() => import('@/components/FAQ'));
 
 const GuitarScene = dynamic(() => import('@/components/ThreeDView/GuitarScene'), {
   ssr: false,

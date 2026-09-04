@@ -56,3 +56,13 @@ body {
 .border-t-hairline {
   border-top: 1px solid var(--border);
 }
+
+/* PayPal SDK Overlay Stacking Context & Z-Index Safety */
+.paypal-checkout-sandbox,
+.paypal-overlay-frame,
+iframe[name^="zoid-paypal-checkout"],
+div[id^="paypal-overlay"],
+div[class*="paypal-overlay"],
+div[class*="paypal-checkout"] {
+  z-index: 999999 !important;
+}

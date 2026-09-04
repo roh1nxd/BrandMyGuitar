@@ -13,7 +13,7 @@ export default function FAQ() {
     },
     {
       q: 'How does the deposit and auto-refund work?',
-      a: 'When you place a bid, you only pay a 20% deposit by card. If someone outbids you, Razorpay automatically sends a full refund of your 20% deposit back to your original payment method right away.',
+      a: 'When you place a bid, you only pay a 20% deposit by card or PayPal. If someone outbids you, your 20% deposit is automatically refunded in full back to your original payment method right away.',
     },
     {
       q: 'What happens when the auction ends?',

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@paypal/react-paypal-js', '@react-three/drei'],
+  },
   transpilePackages: ['three'],
   images: {
     remotePatterns: [

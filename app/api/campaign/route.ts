@@ -1,30 +1,37 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { getLocalCampaign, getLocalZones } from '@/lib/store';
 import { INITIAL_CAMPAIGN } from '@/lib/zones';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   try {
-    if (isSupabaseConfigured && supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from('campaign')
-        .select('*')
-        .eq('id', 1)
-        .single();
+    let adminClient;
+    try {
+      adminClient = getSupabaseAdmin();
+    } catch {
+      adminClient = null;
+    }
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching campaign:', error);
-      }
+    if (isSupabaseConfigured && adminClient) {
+      // Calculate raised_cents dynamically from active bids in database
+      const { data: activeBids } = await adminClient
+        .from('bids')
+        .select('amount_cents')
+        .eq('status', 'active');
 
-      if (data) {
-        return NextResponse.json({ campaign: data });
-      }
+      const totalRaisedFromBids = activeBids
+        ? activeBids.reduce((sum: number, b: any) => sum + (b.amount_cents || 0), 0)
+        : 0;
 
-      // If missing, seed campaign
-      await supabaseAdmin.from('campaign').upsert(INITIAL_CAMPAIGN);
-      return NextResponse.json({ campaign: INITIAL_CAMPAIGN });
+      const campaign = {
+        ...INITIAL_CAMPAIGN,
+        raised_cents: Math.max(INITIAL_CAMPAIGN.raised_cents, totalRaisedFromBids),
+      };
+
+      return NextResponse.json({ campaign });
     }
 
     // Local fallback: calculate raised from paid zones or stored campaign

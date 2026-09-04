@@ -4,17 +4,17 @@ export type ZoneStatus = 'available' | 'reserved' | 'paid';
 export interface Bid {
   id: string;
   zone_id: string;
-  bidder_name: string;
-  bidder_email: string;
+  brand_name: string;
+  email: string;
   website_url: string;
+  x_handle?: string | null;
   logo_url: string;
   amount_cents: number;
   deposit_cents: number;
-  razorpay_payment_id?: string | null;
-  razorpay_order_id?: string | null;
-  razorpay_signature?: string | null;
+  paypal_order_id?: string | null;
+  paypal_capture_id?: string | null;
   status: 'active' | 'outbid' | 'won';
-  refunded: boolean;
+  refunded?: boolean;
   created_at: string;
 }
 

@@ -40,6 +40,23 @@ function formatRelativeTime(dateString?: string): string {
   return `${Math.max(1, diffSecs)}s ago`;
 }
 
+function renderXHandle(handle?: string) {
+  if (!handle) return null;
+  const cleanHandle = handle.trim().replace(/^@/, '');
+  if (!cleanHandle) return null;
+  return (
+    <a
+      href={`https://x.com/${cleanHandle}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[11px] text-muted hover:text-primary transition-colors inline-flex items-center font-normal ml-1"
+      onClick={(e) => e.stopPropagation()}
+    >
+      @{cleanHandle}
+    </a>
+  );
+}
+
 export default function Leaderboard() {
   const { zones, campaign, currency, setSelectedZoneId } = useAuction();
   const [activeTab, setActiveTab] = useState<'spots' | 'history'>('spots');
@@ -69,9 +86,9 @@ export default function Leaderboard() {
 
   useEffect(() => {
     fetchHistory();
-    const interval = setInterval(fetchHistory, 4000);
+    const interval = setInterval(fetchHistory, 15000);
     return () => clearInterval(interval);
-  }, [fetchHistory, zones]);
+  }, [fetchHistory]);
 
   // Calculate spots taken
   const takenSpotsCount = zones.filter((z) => (z.current_bid_cents || 0) > 0).length;
@@ -92,6 +109,7 @@ export default function Leaderboard() {
       hasBid,
       latestBidTime: latestBid?.created_at,
       websiteUrl: z.website_url || latestBid?.website_url,
+      xHandle: (z as any).x_handle || latestBid?.x_handle,
     };
   });
 
@@ -216,19 +234,22 @@ export default function Leaderboard() {
                             )}
                           </div>
                           <div>
-                            {spot.websiteUrl ? (
-                              <a
-                                href={spot.websiteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-bold text-ink hover:text-primary transition-colors inline-flex items-center gap-1 group"
-                              >
-                                <span>{spot.brand_name}</span>
-                                <ExternalLink className="w-3 h-3 text-muted group-hover:text-primary" />
-                              </a>
-                            ) : (
-                              <span className="font-bold text-ink">{spot.brand_name}</span>
-                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {spot.websiteUrl ? (
+                                <a
+                                  href={spot.websiteUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-bold text-ink hover:text-primary transition-colors inline-flex items-center gap-1 group"
+                                >
+                                  <span>{spot.brand_name}</span>
+                                  <ExternalLink className="w-3 h-3 text-muted group-hover:text-primary" />
+                                </a>
+                              ) : (
+                                <span className="font-bold text-ink">{spot.brand_name}</span>
+                              )}
+                              {renderXHandle(spot.xHandle)}
+                            </div>
                             <span className="text-[10px] text-emerald-700 block font-medium">Active leader</span>
                           </div>
                         </div>
@@ -306,6 +327,7 @@ export default function Leaderboard() {
                       ) : (
                         <span className="font-bold text-ink">{spot.brand_name}</span>
                       )}
+                      {renderXHandle(spot.xHandle)}
                     </div>
                   ) : (
                     <span className="text-muted italic">Unclaimed spot</span>
@@ -383,6 +405,7 @@ export default function Leaderboard() {
                               ) : (
                                 <span className="font-bold text-ink">{bid.brand_name}</span>
                               )}
+                              {renderXHandle(bid.x_handle)}
                             </div>
                           </td>
                           <td className="py-3.5 px-6 font-bold text-ink">
@@ -452,6 +475,7 @@ export default function Leaderboard() {
                           ) : (
                             <span className="font-bold text-ink">{bid.brand_name}</span>
                           )}
+                          {renderXHandle(bid.x_handle)}
                         </div>
 
                         <span className="font-bold text-primary text-sm">{formatPrice(bid.amount_cents, currency)}</span>

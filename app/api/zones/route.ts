@@ -18,23 +18,53 @@ function noCacheJson(body: any, init?: ResponseInit) {
   });
 }
 
+import { getCachedZonesData, setCachedZonesData } from '@/lib/cache';
+
 export async function GET() {
+  const reqStart = Date.now();
+  console.log(`[STAGE 1 - ENTRY] GET /api/zones handler entered at +0ms`);
+
   try {
+    const cached = getCachedZonesData();
+    if (cached) {
+      console.log(`[CACHE HIT] GET /api/zones (served from cache, age: ${cached.ageMs}ms, handler execution time: ${Date.now() - reqStart}ms)`);
+      return noCacheJson(cached.data);
+    }
+
+    console.log(`[STAGE 2 - CACHE MISS] GET /api/zones at +${Date.now() - reqStart}ms`);
+
     let adminClient;
+    const clientStart = Date.now();
     try {
       adminClient = getSupabaseAdmin();
     } catch (e) {
       adminClient = null;
     }
+    console.log(`[STAGE 3 - CLIENT SETUP] getSupabaseAdmin took ${Date.now() - clientStart}ms (total elapsed: +${Date.now() - reqStart}ms)`);
 
     if (adminClient) {
-      // 1. Fetch zones
-      let { data: dbZones, error: zonesErr } = await adminClient
-        .from('zones')
-        .select('*');
+      const dbStart = Date.now();
+      // Execute DB queries concurrently via Promise.all with specific column selection
+      const [zonesRes, activeBidsRes, allBidsRes] = await Promise.all([
+        adminClient.from('zones').select('id, name, size, starting_price_cents'),
+        adminClient.from('bids').select('id, zone_id, brand_name, email, website_url, logo_url, amount_cents, status').eq('status', 'active'),
+        adminClient.from('bids').select('zone_id'),
+      ]);
+
+      const dbDuration = Date.now() - dbStart;
+      console.log(`[STAGE 4 - DB QUERIES] Supabase Promise.all took ${dbDuration}ms (total elapsed: +${Date.now() - reqStart}ms)`);
+
+      let dbZones = zonesRes.data;
+      const zonesErr = zonesRes.error;
+      const activeBids = activeBidsRes.data;
+      const bidsErr = activeBidsRes.error;
+      const allBids = allBidsRes.data;
 
       if (zonesErr) {
         console.error('Error fetching zones from Supabase:', zonesErr);
+      }
+      if (bidsErr) {
+        console.error('Error fetching active bids:', bidsErr);
       }
 
       // If no zones exist in DB, seed them automatically
@@ -50,38 +80,24 @@ export async function GET() {
         const { data: seeded, error: seedErr } = await adminClient
           .from('zones')
           .insert(seedPayload)
-          .select('*');
+          .select('id, name, size, starting_price_cents');
 
         if (!seedErr && seeded) {
           dbZones = seeded;
         }
       }
 
-      // 2. Fetch active bids
-      const { data: activeBids, error: bidsErr } = await adminClient
-        .from('bids')
-        .select('*')
-        .eq('status', 'active');
-
-      if (bidsErr) {
-        console.error('Error fetching active bids:', bidsErr);
-      }
-
-      // 3. Fetch all bids to count bids per zone
-      const { data: allBids } = await adminClient
-        .from('bids')
-        .select('zone_id');
-
+      const mapStart = Date.now();
       const bidsCountMap: Record<string, number> = {};
       if (allBids) {
-        allBids.forEach((b) => {
+        allBids.forEach((b: any) => {
           bidsCountMap[b.zone_id] = (bidsCountMap[b.zone_id] || 0) + 1;
         });
       }
 
       const activeBidsMap: Record<string, any> = {};
       if (activeBids) {
-        activeBids.forEach((b) => {
+        activeBids.forEach((b: any) => {
           if (!activeBidsMap[b.zone_id] || b.amount_cents > activeBidsMap[b.zone_id].amount_cents) {
             activeBidsMap[b.zone_id] = b;
           }
@@ -89,7 +105,7 @@ export async function GET() {
       }
 
       if (dbZones && dbZones.length > 0) {
-        const resultZones: Zone[] = dbZones.map((dbZone) => {
+        const resultZones: Zone[] = dbZones.map((dbZone: any) => {
           const activeBid = activeBidsMap[dbZone.id];
           const hasBid = Boolean(activeBid);
 
@@ -126,7 +142,11 @@ export async function GET() {
           };
         });
 
-        return noCacheJson({ zones: orderedZones });
+        console.log(`[STAGE 5 - DATA MAPPING] Data mapping took ${Date.now() - mapStart}ms`);
+        const payload = { zones: orderedZones };
+        setCachedZonesData(payload);
+        console.log(`[STAGE 6 - RESPONSE COMPLETE] Total route execution time: ${Date.now() - reqStart}ms`);
+        return noCacheJson(payload);
       }
     }
 
@@ -146,6 +166,7 @@ export async function GET() {
       top_bidder_email: null,
     }));
 
+    console.log(`[STAGE 6 - FALLBACK RESPONSE] Total route execution time: ${Date.now() - reqStart}ms`);
     return noCacheJson({ zones: fallbackZones });
   } catch (error: any) {
     console.error('Failed to get zones:', error);

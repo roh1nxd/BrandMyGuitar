@@ -19,15 +19,15 @@ create table if not exists zones (
 create table if not exists bids (
   id text primary key,
   zone_id text references zones(id),
-  bidder_name text not null,
-  bidder_email text not null,
+  brand_name text not null,
+  email text not null,
   website_url text not null,
+  x_handle text,
   logo_url text not null,
   amount_cents integer not null,
   deposit_cents integer not null,
-  razorpay_payment_id text,
-  razorpay_order_id text,
-  razorpay_signature text,
+  paypal_order_id text,
+  paypal_capture_id text,
   status text not null default 'active', -- active | outbid | won
   refunded boolean default false,
   created_at timestamptz default now()
@@ -74,3 +74,9 @@ create policy "public read campaign" on campaign for select using (true);
 alter publication supabase_realtime add table zones;
 alter publication supabase_realtime add table bids;
 alter publication supabase_realtime add table campaign;
+
+-- Performance Indexes
+create index if not exists idx_bids_status on bids(status);
+create index if not exists idx_bids_zone_id on bids(zone_id);
+create index if not exists idx_bids_created_at on bids(created_at desc);
+create index if not exists idx_bids_zone_status_amount on bids(zone_id, status, amount_cents desc);
